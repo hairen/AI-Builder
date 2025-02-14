@@ -1,11 +1,13 @@
 import csv
 import ssl
+import certifi
+
 
 from urllib.request import urlopen, Request
 from bs4 import BeautifulSoup
 
 # Create an unverified SSL context
-ssl_context = ssl._create_unverified_context()
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 # Define the root URL for relative links
 root_url = "https://openaccess.thecvf.com"
@@ -35,32 +37,33 @@ for title_tag in soup.find_all("dt", class_="ptitle"):
 # Function to make HTTP GET requests
 def fetch_url_content(url):
   try:
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+               }
     request = Request(url, headers=headers)
     with urlopen(request,
-                 context=ssl_context, timeout=10
+                 context=ssl_context, timeout=2
                  ) as response:  # Use the unverified SSL context
       return response.read().decode("utf-8")
 
   except Exception as e:
-    print(f"Failed to fetch URL: {url}\nError: {e}")
+    print(f"Failed to fetch URL: {url}\nError: {type(e).__name__} - {e}")
     return None
 
 
 # # Visit each article's page and extract its abstract
-# abstracts = []
-# for index, url in enumerate(article_urls):
-#   html_content = fetch_url_content(url)
-#   if html_content is not None:
-#     article_soup = BeautifulSoup(html_content, "html.parser")
-#     # Extract the abstract from the <div> tag with id="abstract"
-#     abstract_tag = article_soup.find("div", id="abstract")
-#     abstract = abstract_tag.text.strip() if abstract_tag else "N/A"
-#     abstracts.append(abstract)
-#   else:
-#     # If URL is inaccessible, append "N/A" for abstract
-#     print(f"Abstract not accessible for title: {titles[index]}")
-#     abstracts.append("N/A")
+abstracts = []
+for index, url in enumerate(article_urls):
+  html_content = fetch_url_content(url)
+  if html_content is not None:
+    article_soup = BeautifulSoup(html_content, "html.parser")
+    # Extract the abstract from the <div> tag with id="abstract"
+    abstract_tag = article_soup.find("div", id="abstract")
+    abstract = abstract_tag.text.strip() if abstract_tag else "N/A"
+    abstracts.append(abstract)
+  else:
+    # If URL is inaccessible, append "N/A" for abstract
+    print(f"Abstract not accessible for title: {titles[index]}")
+    abstracts.append("N/A")
 
 # Extract authors
 authors_list = []
@@ -82,7 +85,7 @@ for i in range(len(titles)):
   row = [
     titles[i],
     authors_list[i] if i < len(authors_list) else 'N/A',
-    # abstracts[i] if i < len(abstracts) else 'N/A',
+    abstracts[i] if i < len(abstracts) else 'N/A',
     pdf_links[i] if i < len(pdf_links) else 'N/A',
   ]
   csv_data.append(row)
